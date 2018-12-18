@@ -1,9 +1,9 @@
 from pathlib import Path
-from collections import Iterable
+
 
 def ensure_dir(paths):
     """Make sure that the directory and its parents exists"""
-    if not isinstance(paths, Iterable):
+    if not isinstance(paths, (list, tuple)):
         paths = [paths]
     for path in paths:
         path = Path(path)
