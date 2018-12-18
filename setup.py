@@ -5,4 +5,7 @@ setup(
     version='0.1.0',
     author='Fernando Perez-Garcia',
     author_email='fernando.perezgarcia.17@ucl.ac.uk',
+    install_requires=[
+        'nibabel',
+    ],
 )
