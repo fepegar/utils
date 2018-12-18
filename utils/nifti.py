@@ -1,12 +1,17 @@
 import numpy as np
 import nibabel as nib
+import SimpleITK as sitk
 
 from .path import ensure_dir
 
 
-def load(path):
-    nii = nib.load(str(path))
-    return nii
+def load(path, itk=False):
+    if itk:
+        image = sitk.ReadImage(str(path))
+        return image
+    else:
+        nii = nib.load(str(path))
+        return nii
 
 
 def save(data, affine, path, rgb=False):
