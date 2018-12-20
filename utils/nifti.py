@@ -14,15 +14,20 @@ def load(path, itk=False):
         return nii
 
 
-def save(data, affine, path, rgb=False):
-    import nibabel as nib
-    nii = nib.Nifti1Image(data, affine)
-    nii.header['qform_code'] = 1
-    nii.header['sform_code'] = 0
-    if rgb:
-        nii.header.set_intent('vector')
-    ensure_dir(path)
-    nib.save(nii, str(path))
+def save(data, affine=None, path=None, rgb=False, itk=False):
+    if itk:
+        import SimpleITK as sitk
+        image = data
+        sitk.WriteImage(image, str(path))
+    else:
+        import nibabel as nib
+        nii = nib.Nifti1Image(data, affine)
+        nii.header['qform_code'] = 1
+        nii.header['sform_code'] = 0
+        if rgb:
+            nii.header.set_intent('vector')
+        ensure_dir(path)
+        nib.save(nii, str(path))
 
 
 def get_voxel_volume(nii):
