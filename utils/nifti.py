@@ -30,9 +30,13 @@ def save(data, affine=None, path=None, rgb=False, itk=False):
         nib.save(nii, str(path))
 
 
+def get_spacing(nii):
+    return nii.header.get_zooms()
+
+
 def get_voxel_volume(nii):
-    dims = nii.header['pixdim'][1:4]
-    voxel_volume = np.prod(dims)
+    pixdim = get_spacing(nii)
+    voxel_volume = np.prod(pixdim)
     return voxel_volume
 
 
