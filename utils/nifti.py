@@ -30,10 +30,6 @@ def save(data, affine=None, path=None, rgb=False, itk=False):
         nib.save(nii, str(path))
 
 
-def get_spacing(nii):
-    return nii.header.get_zooms()
-
-
 def get_voxel_volume(nii):
     pixdim = get_spacing(nii)
     voxel_volume = np.prod(pixdim)
@@ -44,8 +40,13 @@ def get_shape(path):
     return load(path).shape
 
 
-def get_spacing(path):
-    return load(path).header.get_zooms()
+def get_spacing(path_or_nii):
+    import nibabel as nib
+    if isinstance(path_or_nii, nib.Nifti1Image):
+        nii = path_or_nii
+    else:
+        nii = load(path_or_nii)
+    return nii.header.get_zooms()
 
 
 def transform_points(points, affine, discretize=False):
