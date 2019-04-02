@@ -14,9 +14,10 @@ def load(path, itk=False):
         return nii
 
 
-def save(data, affine=None, path=None, rgb=False, itk=False):
+def save(data, path=None, affine=None, rgb=False, itk=False):
+    import SimpleITK as sitk
+    itk = isinstance(data, sitk.Image)
     if itk:
-        import SimpleITK as sitk
         image = data
         sitk.WriteImage(image, str(path))
     else:
