@@ -102,3 +102,7 @@ class AffineMatrix(object):
     def right_multiply(self, affine):
         affine = AffineMatrix(affine)
         self.matrix = np.dot(self.matrix, affine.matrix)
+
+
+    def get_itk_transform(self):
+        return io.matrix_to_itk_transform(self.matrix)
