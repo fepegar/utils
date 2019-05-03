@@ -4,6 +4,7 @@ from typing import Union, Optional
 import ffmpeg
 from ffmpeg.nodes import FilterableStream
 import numpy as np
+from tqdm import trange
 
 from .path import ensure_dir
 
@@ -125,6 +126,38 @@ class Video:
         sex = SequenceExtractor(self, self.fps)
         stream = sex.get_sequence_stream()
         sex.write_stream(stream, output_path)
+
+    def read_frame_from_process(self, process):
+        in_bytes = process.stdout.read(self.width * self.height * 3)
+        if not in_bytes:
+            return None
+        in_frame = (
+            np
+            .frombuffer(in_bytes, np.uint8)
+            .reshape([self.height, self.width, 3])
+        )
+        return in_frame
+
+    def get_motion_array(self):
+        step = 10
+        sex = SequenceExtractor(self)
+        period = 1 / self.fps
+        stream = sex.get_sequence_stream(0)
+        previous = sex.get_array_from_stream(stream, period)
+        mses = []
+        for n in trange(step, self.num_frames, step):
+            ss = frame_to_time(n, self.fps)
+            stream = sex.get_sequence_stream(ss)
+            current = sex.get_array_from_stream(stream, period)
+            mse = self.get_mse(previous, current)
+            mses.append(mse)
+            previous = current
+        return np.array(mses)
+
+    def get_mse(self, a, b):
+        diff = a - b
+        sq = diff ** 2
+        return sq.mean()
 
 
 
@@ -259,6 +292,7 @@ class SequenceExtractor:
         return array
 
 
+
 def frames_to_video(
         frames_dir: Union[Path, str],
         video_path: Union[Path, str],
@@ -272,10 +306,17 @@ def frames_to_video(
     stream = ffmpeg.output(stream, str(video_path))
     ffmpeg.run(stream, overwrite_output=True)
 
-def time_to_frame(time, fps):
-    return time * fps
+
+def time_to_frame(time, fps, floor=False):
+    frame = time * fps
+    if floor:
+        frame = int(np.floor(frame))
+    return frame
 
 def round_time(time, fps):
     frame = np.floor(time_to_frame(time, fps))  # zero-based
     new_time = frame / fps
     return new_time
+
+def frame_to_time(frame, fps):
+    return frame / fps
