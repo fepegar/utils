@@ -4,9 +4,10 @@ from typing import Union, Optional
 import ffmpeg
 from ffmpeg.nodes import FilterableStream
 import numpy as np
-from tqdm import trange
+from skimage import io, color, img_as_ubyte, exposure
+from tqdm import tqdm, trange
 
-from .path import ensure_dir
+from .path import ensure_dir, sglob
 
 
 class VideoError(Exception):
@@ -320,3 +321,41 @@ def round_time(time, fps):
 
 def frame_to_time(frame, fps):
     return frame / fps
+
+def get_mean_frame(frames_dir):
+    fps = sglob(frames_dir)
+    one = io.imread(fps[0])
+    result = np.zeros_like(one, float)
+    for fp in tqdm(fps):
+        result += io.imread(fp)
+    return result / len(fps)
+
+def subtract_mean_frame(input_dir, output_dir=None, mean=None):
+    mean = get_mean_frame(input_dir) if mean is None else mean
+    output_dir = input_dir if output_dir is None else output_dir
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    ensure_dir(output_dir)
+    fps = sglob(input_dir)
+    for src in tqdm(fps):
+        image = io.imread(src)
+        diff = np.abs(mean - image)
+        dst = output_dir / src.name
+        io.imsave(dst, diff.astype(np.uint8))
+
+def enhance(input_dir, output_dir=None):
+    output_dir = input_dir if output_dir is None else output_dir
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    ensure_dir(output_dir)
+    fps = sglob(input_dir)
+    for src in tqdm(fps):
+        image = io.imread(src)
+        hsv = color.rgb2hsv(image)
+        v = hsv[..., 2]
+        p1, p2 = np.percentile(v, (1, 99))
+        v = exposure.rescale_intensity(v, in_range=(p1, p2))
+        hsv[..., 2] = v
+        rgb = color.hsv2rgb(hsv)
+        dst = output_dir / src.name
+        io.imsave(dst, img_as_ubyte(rgb))
