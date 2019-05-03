@@ -16,6 +16,9 @@ def ensure_dir(paths: Union[list, tuple, str, Path]) -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
 
 
-def sglob(path: Union[Path, str], pattern) -> List[Path]:
+def sglob(
+        path: Union[Path, str],
+        pattern: str = '**/*'
+        ) -> List[Path]:
     path = Path(path)
     return sorted(list(path.glob(pattern)))
