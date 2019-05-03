@@ -1,0 +1,281 @@
+from pathlib import Path
+from typing import Union, Optional
+
+import ffmpeg
+from ffmpeg.nodes import FilterableStream
+import numpy as np
+
+from .path import ensure_dir
+
+
+class VideoError(Exception):
+    pass
+
+
+
+class Video:
+    def __init__(self, path: Union[str, Path]):
+        self.path = Path(path)
+        self.info = self.get_info() if self.path.is_file() else None
+
+    @property
+    def num_frames(self):
+        return int(self.info['nb_frames'])
+
+    @property
+    def fps(self):
+        r_fps = self.info['r_frame_rate']
+        num, denom = r_fps.split('/')
+        fps = float(num) / float(denom)
+        return fps
+
+    @property
+    def duration(self):
+        return float(self.info['duration'])
+
+    @property
+    def width(self):
+        return int(self.info['width'])
+
+    @property
+    def height(self):
+        return int(self.info['height'])
+
+    @property
+    def size(self):
+        return self.width, self.height
+
+    @property
+    def shape(self):
+        return self.height, self.width
+
+    def get_info(self):
+        probe = ffmpeg.probe(str(self.path))
+        video_info = next(
+            (
+                stream
+                for stream
+                in probe['streams']
+                if stream['codec_type'] == 'video'
+            ),
+            None,
+        )
+        return video_info
+
+    def get_frames_pattern_string(self):
+        """
+        Return the pattern for the output frames names with the necessary
+        zero-padding
+        """
+        n = len(str(self.num_frames))
+        return f'{self.path.stem}_%0{n}d'
+
+    def overlay(
+            self,
+            output_path: Union[str, Path],
+            frames: bool = True,
+            time: bool = True,
+            downscale_factor: int = 2,
+            subtitles_path: Optional[Union[str, Path, None]] = None,
+            burn_subtitles: bool = True,
+        ):
+        """
+        https://ffmpeg.org/ffmpeg-filters.html#drawtext-1
+        """
+        stream = ffmpeg.input(self.path)
+        stream = ffmpeg.filter(
+            stream,
+            'scale',
+            f'iw/{downscale_factor}',
+            f'ih/{downscale_factor}',
+        )
+        if frames:
+            stream = ffmpeg.filter(
+                stream,
+                'drawtext',
+                text='%{n}',  # frame number
+                fontcolor='Yellow',
+                x=0,
+                y=0,
+            )
+        if time:
+            stream = ffmpeg.filter(
+                stream,
+                'drawtext',
+                text='%{pts}',  # timestamp
+                fontcolor='Yellow',
+                x=0,
+                y='h-text_h',
+            )
+        if subtitles_path is not None:
+            # https://stackoverflow.com/a/13125122/3956024
+            subtitles_path = Path(subtitles_path)
+            if burn_subtitles:
+                stream = ffmpeg.filter(
+                    stream,
+                    'subtitles',
+                    str(subtitles_path),
+                )
+            else:
+                pass  # TODO
+        output = stream.output(str(output_path), t=5)
+        output.run(quiet=True, overwrite_output=True)
+
+    def write(self, output_path: Union[str, Path]):
+        sex = SequenceExtractor(self, self.fps)
+        stream = sex.get_sequence_stream()
+        sex.write_stream(stream, output_path)
+
+
+
+class SequenceExtractor:
+    def __init__(
+            self,
+            video: Video,
+            output_fps: Optional[float] = None,
+            round_position: bool = True,
+        ):
+        self.video = video
+        self.output_fps = video.fps if output_fps is None else output_fps
+        self.round_position = round_position
+
+    def parse_position(self, position: float):
+        if position < 0:
+            message = 'Position is negative'
+            raise VideoError(message)
+        if position > self.video.duration:
+            message = 'Position is larger than video duration'
+            raise VideoError(message)
+
+    def parse_duration(self, position, duration):
+        """
+        Unused for now
+        """
+        end = position + duration
+        if end > self.video.duration:
+            message = 'End position is larger than video duration'
+            raise VideoError(message)
+
+    def get_sequence_stream(
+            self,
+            position: Optional[float] = 0,
+        ) -> FilterableStream:
+
+        if self.round_position:
+            position = round_time(position, self.video.fps)
+
+        self.parse_position(position)
+
+        stream = (
+            ffmpeg
+            .input(
+                str(self.video.path),
+                ss=position,  # always in input, it's faster
+            )
+            .filter(
+                'fps',
+                fps=self.output_fps,
+                round='up',  # gave me the exact results
+                eof_action='pass',
+            )
+        )
+        return stream
+
+    def get_buffer_from_stream(
+            self,
+            stream: FilterableStream,
+            duration: float,
+        ) -> bytes:
+        out, _ = (
+            stream
+            .output(
+                'pipe:',
+                format='rawvideo',
+                pix_fmt='rgb24',
+                t=duration,
+            )
+            .run(
+                quiet=True,
+            )
+        )
+        return out
+
+    def write_stream(
+            self,
+            stream: FilterableStream,
+            output_path: Union[str, Path],
+            duration: Optional[float] = None,
+            extension='.jpg',
+            pattern: Optional[str] = None,
+            jpeg_quality: int = 2,  # 2-31 with 31 being the worst quality
+        ):
+        output_path = Path(output_path)
+        ensure_dir(output_path)
+
+        kwargs = {'qscale:v': jpeg_quality}
+        if duration is not None:
+            kwargs['t'] = duration
+
+        is_dir = not output_path.suffix
+        if is_dir:
+            if pattern is None:
+                pattern = self.video.get_frames_pattern_string()
+            format_string = pattern + extension
+            output_path = output_path / format_string
+            kwargs['start_number'] = 0
+
+        (
+            stream
+            .output(str(output_path), **kwargs)
+            .run(quiet=True)
+        )
+
+    def write_gif(
+            self,
+            stream: FilterableStream,
+            duration: float,
+            output_path: Union[str, Path],
+            palette_path: Optional[Union[str, Path]] = None,
+        ):
+        """
+        TODO
+        """
+        # scale = ffmpeg.filter(stream, 'scale', width=320,
+        #                       height=-1, flags='lanczos')
+        if palette_path is None:
+            palette_path = '/tmp/palette.png'
+        palettegen = ffmpeg.filter(stream, 'palettegen')
+        output = palettegen.output(str(palette_path))
+        output.run(quiet=True)
+
+    def get_array_from_stream(self, stream, duration) -> np.ndarray:
+        buffer = self.get_buffer_from_stream(stream, duration)
+        width, height = self.video.size
+        array = (
+            np
+            .frombuffer(buffer, np.uint8)
+            .reshape([-1, height, width, 3])
+        )
+        return array
+
+
+def frames_to_video(
+        frames_dir: Union[Path, str],
+        video_path: Union[Path, str],
+        fps: int = 25,
+        format_: str = '*.jpg',
+        ) -> None:
+    ensure_dir(video_path)
+    frames_dir = Path(frames_dir)
+    input_pattern = frames_dir / format_
+    stream = ffmpeg.input(input_pattern, pattern_type='glob', framerate=fps)
+    stream = ffmpeg.output(stream, str(video_path))
+    ffmpeg.run(stream, overwrite_output=True)
+
+def time_to_frame(time, fps):
+    return time * fps
+
+def round_time(time, fps):
+    frame = np.floor(time_to_frame(time, fps))  # zero-based
+    new_time = frame / fps
+    return new_time
