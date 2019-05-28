@@ -22,7 +22,13 @@ class Video:
 
     @property
     def num_frames(self):
-        return int(self.info['nb_frames'])
+        # https://github.com/kkroening/ffmpeg-python/issues/110#issuecomment-412517933
+        try:
+            n = self.info['nb_frames']
+        except KeyError:
+            n = self.fps * self.duration
+        n = np.round(n).astype(int)
+        return n
 
     @property
     def fps(self):
@@ -306,7 +312,6 @@ def frames_to_video(
     stream = ffmpeg.input(input_pattern, pattern_type='glob', framerate=fps)
     stream = ffmpeg.output(stream, str(video_path))
     ffmpeg.run(stream, overwrite_output=True)
-
 
 def time_to_frame(time, fps, floor=False):
     frame = time * fps
