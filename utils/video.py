@@ -126,7 +126,7 @@ class Video:
                 )
             else:
                 pass  # TODO
-        output = stream.output(str(output_path), t=5)
+        output = stream.output(str(output_path))
         output.run(quiet=True, overwrite_output=True)
 
     def write(self, output_path: Union[str, Path]):
@@ -174,10 +174,14 @@ class SequenceExtractor:
             video: Video,
             output_fps: Optional[float] = None,
             round_position: bool = True,
+            quiet: bool = True,
+            overwrite_output: bool = True,
         ):
         self.video = video
         self.output_fps = video.fps if output_fps is None else output_fps
         self.round_position = round_position
+        self.quiet = quiet
+        self.overwrite_output = overwrite_output
 
     def parse_position(self, position: float):
         if position < 0:
@@ -267,7 +271,7 @@ class SequenceExtractor:
         (
             stream
             .output(str(output_path), **kwargs)
-            .run(quiet=True)
+            .run(quiet=self.quiet, overwrite_output=self.overwrite_output)
         )
 
     def write_gif(
