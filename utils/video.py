@@ -24,7 +24,7 @@ class Video:
     def num_frames(self):
         # https://github.com/kkroening/ffmpeg-python/issues/110#issuecomment-412517933
         try:
-            n = self.info['nb_frames']
+            n = float(self.info['nb_frames'])
         except KeyError:
             n = self.fps * self.duration
         n = np.round(n).astype(int)
@@ -228,19 +228,20 @@ class SequenceExtractor:
     def get_buffer_from_stream(
             self,
             stream: FilterableStream,
-            duration: float,
+            duration: Optional[float] = None,
         ) -> bytes:
+        output_kwargs = dict(
+            format='rawvideo',
+            pix_fmt='rgb24',
+        )
+        if duration is not None:
+            num_frames = self.output_fps * duration
+            num_frames = np.round(num_frames).astype(int)
+            output_kwargs['frames:v'] = num_frames
         out, _ = (
             stream
-            .output(
-                'pipe:',
-                format='rawvideo',
-                pix_fmt='rgb24',
-                t=duration,
-            )
-            .run(
-                quiet=True,
-            )
+            .output('pipe:', **output_kwargs)
+            .run(quiet=True)
         )
         return out
 
@@ -258,8 +259,9 @@ class SequenceExtractor:
 
         kwargs = {'qscale:v': jpeg_quality}
         if duration is not None:
-            kwargs['t'] = duration
-
+            num_frames = self.output_fps * duration
+            num_frames = np.round(num_frames).astype(int)
+            kwargs['frames:v'] = num_frames
         is_dir = not output_path.suffix
         if is_dir:
             if pattern is None:
@@ -292,7 +294,7 @@ class SequenceExtractor:
         output = palettegen.output(str(palette_path))
         output.run(quiet=True)
 
-    def get_array_from_stream(self, stream, duration) -> np.ndarray:
+    def get_array_from_stream(self, stream, duration=None) -> np.ndarray:
         buffer = self.get_buffer_from_stream(stream, duration)
         width, height = self.video.size
         array = (
