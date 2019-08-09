@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union, Optional
 import numpy as np
 import nibabel as nib
-import SimpleITK
+import SimpleITK as sitk
 from .path import ensure_dir
 
 
