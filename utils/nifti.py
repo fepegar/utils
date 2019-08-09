@@ -1,27 +1,35 @@
+from pathlib import Path
+from typing import Union, Optional
 import numpy as np
-
+import nibabel as nib
+import SimpleITK
 from .path import ensure_dir
 
 
-def load(path, itk=False):
+def load(
+        path: Union[str, Path],
+        itk: bool = False,
+        ) -> Union[nib.Nifti1Image, sitk.Image]:
     if itk:
-        import SimpleITK as sitk
         image = sitk.ReadImage(str(path))
         return image
     else:
-        import nibabel as nib
         nii = nib.load(str(path))
         return nii
 
 
-def save(data, path=None, affine=None, rgb=False, itk=False):
-    import SimpleITK as sitk
+def save(
+        data: Union[nib.Nifti1Image, sitk.Image],
+        path: Optional[Union[str, Path]] = None,
+        affine: Optional[np.ndarray] = None,
+        rgb: bool = False,
+        itk: bool = False,
+        ) -> None:
     itk = isinstance(data, sitk.Image)
     if itk:
         image = data
         sitk.WriteImage(image, str(path))
     else:
-        import nibabel as nib
         nii = nib.Nifti1Image(data, affine)
         nii.header['qform_code'] = 1
         nii.header['sform_code'] = 0
@@ -42,7 +50,6 @@ def get_shape(path):
 
 
 def get_spacing(path_or_nii):
-    import nibabel as nib
     if isinstance(path_or_nii, nib.Nifti1Image):
         nii = path_or_nii
     else:
@@ -50,8 +57,11 @@ def get_spacing(path_or_nii):
     return nii.header.get_zooms()
 
 
+def get_data(path: Union[str, Path]) -> np.ndarray:
+    return load(path).get_data()
+
+
 def transform_points(points, affine, discretize=False):
-    import nibabel as nib
     transformed = nib.affines.apply_affine(affine, points)
     if discretize:
         transformed = np.round(transformed).astype(np.uint16)
