@@ -19,7 +19,7 @@ def load(
 
 
 def save(
-        data: Union[nib.Nifti1Image, sitk.Image],
+        data: Union[np.ndarray, sitk.Image],
         path: Optional[Union[str, Path]] = None,
         affine: Optional[np.ndarray] = None,
         rgb: bool = False,
