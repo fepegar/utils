@@ -20,10 +20,9 @@ def load(
 
 def save(
         data: Union[np.ndarray, sitk.Image],
-        path: Optional[Union[str, Path]] = None,
+        path: Union[str, Path],
         affine: Optional[np.ndarray] = None,
         rgb: bool = False,
-        itk: bool = False,
         ) -> None:
     itk = isinstance(data, sitk.Image)
     if itk:
