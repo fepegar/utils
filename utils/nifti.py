@@ -58,7 +58,11 @@ def get_spacing(path_or_nii):
 
 
 def get_data(path: Union[str, Path]) -> np.ndarray:
-    return load(path).get_data()
+    data = load(path).get_data()
+    # I'm getting an error because GridSampler.array is read as a memmap
+    if isinstance(data, np.memmap):
+        data = np.array(data)
+    return data
 
 
 def transform_points(points, affine, discretize=False):
