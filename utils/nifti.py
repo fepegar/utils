@@ -9,12 +9,13 @@ from .path import ensure_dir
 def load(
         path: Union[str, Path],
         itk: bool = False,
+        mmap: bool = True,
         ) -> Union[nib.Nifti1Image, sitk.Image]:
     if itk:
         image = sitk.ReadImage(str(path))
         return image
     else:
-        nii = nib.load(str(path))
+        nii = nib.load(str(path), mmap=mmap)
         return nii
 
 
