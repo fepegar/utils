@@ -37,7 +37,7 @@ def from_itk_convention(matrix):
 def read_itk_matrix(trsf_tfm_path):
     """Read an affine transform in ITK's .tfm format"""
     import SimpleITK as sitk
-    transform = sitk.ReadTransform(trsf_tfm_path)
+    transform = sitk.ReadTransform(str(trsf_tfm_path))
     parameters = transform.GetParameters()
 
     rotation_parameters = parameters[:9]
@@ -56,7 +56,7 @@ def write_itk_matrix(matrix, tfm_path):
     """The tfm file contains the matrix from floating to reference."""
     import SimpleITK as sitk
     transform = matrix_to_itk_transform(matrix)
-    transform.WriteTransform(tfm_path)
+    transform.WriteTransform(str(tfm_path))
 
 
 def matrix_to_itk_transform(matrix):

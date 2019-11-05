@@ -64,24 +64,26 @@ class AffineMatrix(object):
 
 
     def parse_path(self, path):
-        if not isfile(path):
-            raise FileNotFoundError('The transform {} '
-                                    'does not exist'.format(path))
+        path = Path(path)
+        if not path.is_file():
+            raise FileNotFoundError(f'The transform {path} does not exist')
         self.parse_extension(path)
+        return path
 
 
     def parse_extension(self, path):
-        _, extension = splitext(path)
+        path = Path(path)
+        extension = path.suffix
         if extension not in VALID_TRSF_EXTENSIONS:
             raise IOError('Transform extension must be .txt or .tfm, '
                           'not {}'.format(extension))
 
 
     def read(self, path):
-        self.parse_path(path)
-        if path.endswith(io.NIFTYREG_EXT):  # NiftyReg
+        path = self.parse_path(path)
+        if path.suffix == io.NIFTYREG_EXT:
             matrix = io.read_niftyreg_matrix(path)
-        elif path.endswith(io.ITK_EXT):
+        elif path.suffix == io.ITK_EXT:
             matrix = io.read_itk_matrix(path)
         return matrix
 
