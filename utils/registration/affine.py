@@ -77,6 +77,7 @@ class AffineMatrix(object):
         if extension not in VALID_TRSF_EXTENSIONS:
             raise IOError('Transform extension must be .txt or .tfm, '
                           'not {}'.format(extension))
+        return path
 
 
     def read(self, path):
@@ -89,10 +90,10 @@ class AffineMatrix(object):
 
 
     def write(self, path):
-        self.parse_extension(path)
-        if path.endswith(io.NIFTYREG_EXT):  # NiftyReg
+        path = self.parse_extension(path)
+        if path.suffix == io.NIFTYREG_EXT:
             io.write_niftyreg_matrix(self.matrix, path)
-        elif path.endswith(io.ITK_EXT):
+        elif path.suffix == io.ITK_EXT:
             io.write_itk_matrix(self.matrix, path)
 
 
