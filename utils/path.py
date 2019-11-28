@@ -22,3 +22,8 @@ def sglob(
         ) -> List[Path]:
     path = Path(path)
     return sorted(list(path.glob(pattern)))
+
+
+def get_stem(path: Union[Path, str]) -> str:
+    path = Path(path)
+    return path.name.split('.')[0]
