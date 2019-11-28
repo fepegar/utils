@@ -1,16 +1,46 @@
+"""
+See https://github.com/ANTsX/ANTs/wiki/How-does-ANTs-handle-qform-and-sform-in-NIFTI-1-images%3F
+
+"When writing NIFTI files, ITK encodes the rotation, translation and scaling in
+ the qform. The qform code is set to 1 (NIFTI_XFORM_SCANNER_ANAT), and the sform
+ code is set to 0. The loss of the sform is unavoidable because the ITK I/O
+ code reads images into a common internal structure, independent of the
+    individual image format on disk, and only supports a rigid transformation."
+
+"""
+
+import warnings
 from pathlib import Path
 from typing import Union, Optional
+
 import numpy as np
 import nibabel as nib
 import SimpleITK as sitk
 from .path import ensure_dir
 
 
+SFORM_CODES = {
+    0: 'unknown (sform not defined)',
+    1: 'scanner (RAS+ in scanner coordinates)',
+    2: 'aligned (RAS+ aligned to some other scan)',
+    3: 'talairach (RAS+ in Talairach atlas space)',
+    4: 'mni',
+}
+
+
 def load(
         path: Union[str, Path],
         itk: bool = False,
         mmap: bool = True,
+        warn_sform: bool = True,
         ) -> Union[nib.Nifti1Image, sitk.Image]:
+    nii = nib.load(str(path), mmap=mmap)
+    if warn_sform:
+        sform_code = int(nii.header['sform_code'])
+        if sform_code == 2:
+            meaning = SFORM_CODES[sform_code]
+            path = Path(path)
+            warnings.warn(f'{path.name} has sform code {sform_code}: {meaning}')
     if itk:
         image = sitk.ReadImage(str(path))
         return image
@@ -24,18 +54,19 @@ def save(
         path: Union[str, Path],
         affine: Optional[np.ndarray] = None,
         rgb: bool = False,
+        header: Optional[nib.nifti1.Nifti1Header] = None,
         ) -> None:
+    ensure_dir(path)
     itk = isinstance(data, sitk.Image)
     if itk:
         image = data
         sitk.WriteImage(image, str(path))
     else:
-        nii = nib.Nifti1Image(data, affine)
+        nii = nib.Nifti1Image(data, affine, header=header)
         nii.header['qform_code'] = 1
         nii.header['sform_code'] = 0
         if rgb:
             nii.header.set_intent('vector')
-        ensure_dir(path)
         nib.save(nii, str(path))
 
 
