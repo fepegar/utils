@@ -43,6 +43,7 @@ def load(
             warnings.warn(f'{path.name} has sform code {sform_code}: {meaning}')
     if itk:
         image = sitk.ReadImage(str(path))
+        image += 0  # https://discourse.itk.org/t/simpleitk-writing-nifti-with-invalid-header/2498/4
         return image
     else:
         nii = nib.load(str(path), mmap=mmap)
