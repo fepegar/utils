@@ -107,5 +107,5 @@ class AffineMatrix(object):
         self.matrix = np.dot(self.matrix, affine.matrix)
 
 
-    def get_itk_transform(self):
-        return io.matrix_to_itk_transform(self.matrix)
+    def get_itk_transform(self, dimensions=3):
+        return io.matrix_to_itk_transform(self.matrix, dimensions=dimensions)
