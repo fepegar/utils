@@ -12,6 +12,7 @@ def print_color(string, color, bold=False):
     """
     Formats the string with colors for terminal prints
     """
+    string = str(string)
     if bold is True:
         print(BOLD + color + string + ENDC)
     else:
