@@ -14,9 +14,13 @@ from pathlib import Path
 from typing import Union, Optional
 
 import numpy as np
-import nibabel as nib
-import SimpleITK as sitk
 from .path import ensure_dir
+
+try:
+    import nibabel as nib
+    import SimpleITK as sitk
+except Exception:  # probably not using it for medical images
+    pass
 
 
 SFORM_CODES = {
