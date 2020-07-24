@@ -16,11 +16,8 @@ from typing import Union, Optional
 import numpy as np
 from .path import ensure_dir
 
-try:
-    import nibabel as nib
-    import SimpleITK as sitk
-except Exception:  # probably not using it for medical images
-    pass
+import nibabel as nib
+import SimpleITK as sitk
 
 
 SFORM_CODES = {
