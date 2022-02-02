@@ -1,7 +1,9 @@
 import numpy as np
 
 FLIPXY = np.diag([-1, -1, 1, 1])
-ITK_EXT = '.tfm'
+ITK_H5 = '.h5'
+ITK_TFM = '.tfm'
+ITK_EXT = ITK_H5, ITK_TFM
 NIFTYREG_EXT = '.txt'
 
 

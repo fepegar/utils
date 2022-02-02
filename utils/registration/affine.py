@@ -6,7 +6,7 @@ import numpy as np
 from . import io
 
 
-VALID_TRSF_EXTENSIONS = io.NIFTYREG_EXT, io.ITK_EXT
+VALID_TRSF_EXTENSIONS = io.NIFTYREG_EXT, io.ITK_H5, io.ITK_TFM
 
 
 
@@ -75,7 +75,7 @@ class AffineMatrix(object):
         path = Path(path)
         extension = path.suffix
         if extension not in VALID_TRSF_EXTENSIONS:
-            raise IOError('Transform extension must be .txt or .tfm, '
+            raise IOError('Transform extension must be .txt, .h5 or .tfm, '
                           'not {}'.format(extension))
         return path
 
@@ -84,7 +84,7 @@ class AffineMatrix(object):
         path = self.parse_path(path)
         if path.suffix == io.NIFTYREG_EXT:
             matrix = io.read_niftyreg_matrix(path)
-        elif path.suffix == io.ITK_EXT:
+        elif path.suffix in io.ITK_EXT:
             matrix = io.read_itk_matrix(path)
         return matrix
 
@@ -93,7 +93,7 @@ class AffineMatrix(object):
         path = self.parse_extension(path)
         if path.suffix == io.NIFTYREG_EXT:
             io.write_niftyreg_matrix(self.matrix, path)
-        elif path.suffix == io.ITK_EXT:
+        elif path.suffix in io.ITK_EXT:
             io.write_itk_matrix(self.matrix, path)
 
 
