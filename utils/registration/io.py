@@ -61,10 +61,10 @@ def write_itk_matrix(matrix, tfm_path):
     transform.WriteTransform(str(tfm_path))
 
 
-def matrix_to_itk_transform(matrix):
+def matrix_to_itk_transform(matrix, dimensions=3):
     import SimpleITK as sitk
     matrix = to_itk_convention(matrix)
-    rotation = matrix[:3, :3].ravel().tolist()
-    translation = matrix[:3, 3].tolist()
+    rotation = matrix[:dimensions, :dimensions].ravel().tolist()
+    translation = matrix[:dimensions, 3].tolist()
     transform = sitk.AffineTransform(rotation, translation)
     return transform

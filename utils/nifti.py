@@ -14,9 +14,10 @@ from pathlib import Path
 from typing import Union, Optional
 
 import numpy as np
+from .path import ensure_dir
+
 import nibabel as nib
 import SimpleITK as sitk
-from .path import ensure_dir
 
 
 SFORM_CODES = {
